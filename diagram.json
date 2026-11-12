@@ -1,15 +1,80 @@
-{
-    "version": 1,
-    "author": "Laboratorio de Mecatronica",
-    "editor": "wokwi",
-    "parts": [
-        {"type": "board-esp32-devkit-c-v4", "id": "esp32", "top":0, "left": 0, "attrs": {}},
-        {"type": "wokwi-led", "id":"led1","top":-60,"left":130,"attrs":{"color":"blue"}},
-        {"type":"wokwi-resistor","id":"r1","top":30,"left":130,"attrs":{"value":"220"}}
-    ],
-    "connections": [
-        ["esp32:GND.1", "led1:C","black",["v0"]],
-        ["esp32:2","r1:1","green",["v0"]],
-        ["r1:2","led1:A","green",["v0"]]
-    ]
+    {
+  "version": 1,
+  "author": "Anonymous maker",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": 0, "attrs": {} },
+    
+    { "type": "wokwi-led", "id": "led_tl", "top": -50, "left": -100, "attrs": { "color": "red" } },
+    { "type": "wokwi-resistor", "id": "r1", "top": -10, "left": -100, "attrs": { "value": "220" } },
+    { "type": "wokwi-potentiometer", "id": "pot1", "top": -150, "left": -125, "attrs": {} },
+    
+    { "type": "wokwi-led", "id": "led_tr", "top": -50, "left": 150, "attrs": { "color": "green" } },
+    { "type": "wokwi-resistor", "id": "r2", "top": -10, "left": 150, "attrs": { "value": "220" } },
+    { "type": "wokwi-potentiometer", "id": "pot2", "top": -150, "left": 125, "attrs": {} },
+    
+    { "type": "wokwi-led", "id": "led_bl", "top": 180, "left": -100, "attrs": { "color": "blue" } },
+    { "type": "wokwi-resistor", "id": "r3", "top": 140, "left": -100, "attrs": { "value": "220" } },
+    { "type": "wokwi-potentiometer", "id": "pot3", "top": 280, "left": -125, "attrs": {} },
+    
+    { "type": "wokwi-led", "id": "led_br", "top": 180, "left": 150, "attrs": { "color": "yellow" } },
+    { "type": "wokwi-resistor", "id": "r4", "top": 140, "left": 150, "attrs": { "value": "220" } },
+    { "type": "wokwi-potentiometer", "id": "pot4", "top": 280, "left": 125, "attrs": {} },
+    
+    { "type": "wokwi-led", "id": "led_bc", "top": 250, "left": 25, "attrs": { "color": "white" } },
+    { "type": "wokwi-resistor", "id": "r5", "top": 210, "left": 25, "attrs": { "value": "220" } },
+    { "type": "wokwi-potentiometer", "id": "pot5", "top": 350, "left": 0, "attrs": {} },
+    
+    { "type": "wokwi-membrane-keypad", "id": "keypad1", "top": 50, "left": 300, "attrs": {} }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    
+    [ "esp:GND.1", "led_tl:C", "black", ["v0"] ],
+    [ "esp:GND.1", "led_tr:C", "black", ["v0"] ],
+    [ "esp:GND.2", "led_bl:C", "black", ["v0"] ],
+    [ "esp:GND.2", "led_br:C", "black", ["v0"] ],
+    [ "esp:GND.2", "led_bc:C", "black", ["v0"] ],
+    
+    [ "led_tl:A", "r1:1", "green", [] ],
+    [ "r1:2", "esp:15", "green", [] ],
+    [ "led_tr:A", "r2:1", "green", [] ],
+    [ "r2:2", "esp:2", "green", [] ],
+    [ "led_bl:A", "r3:1", "green", [] ],
+    [ "r3:2", "esp:4", "green", [] ],
+    [ "led_br:A", "r4:1", "green", [] ],
+    [ "r4:2", "esp:5", "green", [] ],
+    [ "led_bc:A", "r5:1", "green", [] ],
+    [ "r5:2", "esp:18", "green", [] ],
+    
+    [ "pot1:VCC", "esp:3V3", "red", [] ],
+    [ "pot1:GND", "esp:GND.1", "black", [] ],
+    [ "pot1:SIG", "esp:VP", "yellow", [] ],
+    
+    [ "pot2:VCC", "esp:3V3", "red", [] ],
+    [ "pot2:GND", "esp:GND.1", "black", [] ],
+    [ "pot2:SIG", "esp:VN", "yellow", [] ],
+    
+    [ "pot3:VCC", "esp:3V3", "red", [] ],
+    [ "pot3:GND", "esp:GND.2", "black", [] ],
+    [ "pot3:SIG", "esp:34", "yellow", [] ],
+    
+    [ "pot4:VCC", "esp:3V3", "red", [] ],
+    [ "pot4:GND", "esp:GND.2", "black", [] ],
+    [ "pot4:SIG", "esp:35", "yellow", [] ],
+    
+    [ "pot5:VCC", "esp:3V3", "red", [] ],
+    [ "pot5:GND", "esp:GND.2", "black", [] ],
+    [ "pot5:SIG", "esp:32", "yellow", [] ],
+    
+    [ "keypad1:R1", "esp:13", "gray", [] ],
+    [ "keypad1:R2", "esp:12", "gray", [] ],
+    [ "keypad1:R3", "esp:14", "gray", [] ],
+    [ "keypad1:R4", "esp:27", "gray", [] ],
+    [ "keypad1:C1", "esp:26", "gray", [] ],
+    [ "keypad1:C2", "esp:25", "gray", [] ],
+    [ "keypad1:C3", "esp:22", "gray", [] ],
+    [ "keypad1:C4", "esp:21", "gray", [] ]
+  ]
 }
