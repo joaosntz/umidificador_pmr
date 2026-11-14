@@ -147,14 +147,14 @@
       "id": "lcd1",
       "top": -32,
       "left": 389.6,
-      "attrs": { "pins": "i2c" }
+      "attrs": { "pins": "i2c", "i2cAddress": "0x27" }
     },
     {
       "type": "wokwi-lcd1602",
       "id": "lcd2",
       "top": -166.4,
       "left": 389.6,
-      "attrs": { "pins": "i2c" }
+      "attrs": { "pins": "i2c", "i2c-address": "0x3f" }
     }
   ],
   "connections": [

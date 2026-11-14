@@ -61,5 +61,11 @@ extern sdm_channel_handle_t sdm_handles[2];
 void init_pwm_leds(void);
 void init_adc_pots(void);
 void init_i2c_lcd(void);
+void init_keypad(void);
+char ler_teclado(void);
+void lcd_init(uint8_t addr);
+void lcd_clear(uint8_t addr);
+void lcd_set_cursor(uint8_t addr, uint8_t row, uint8_t col);
+void lcd_send_string(uint8_t addr, const char *str);
 
 #endif 
