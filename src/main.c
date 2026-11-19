@@ -398,6 +398,16 @@ void app_main(void) {
             }
         }
         // --------------------------------------------
+        if (tecla == '*'){
+            opcao = 6;
+            evento = (Evento)opcao;
+            t = tabela_transicao[estado_atual][evento];
+            estado_atual = t.proximo_estado;
+            executar_acao(t.acao_a_executar);
+            umidade = 0;
+            digitos_lidos = 0;
+        }
+        
 
 
         // CONFIGURAÇÃO DO DHT NO MAIN
