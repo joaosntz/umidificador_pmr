@@ -29,6 +29,8 @@
 #include "DHT22.h"
 
 #include "esp_rom_sys.h"
+#include "esp_timer.h"
+
 
 
 // == global defines =============================================
@@ -82,20 +84,15 @@ void errorHandler(int response)
 ;
 ;--------------------------------------------------------------------------------*/
 
-int getSignalLevel( int usTimeOut, bool state )
+int getSignalLevel(int usTimeOut, bool state)
 {
-
-	int uSec = 0;
-	while( gpio_get_level(DHTgpio)==state ) {
-
-		if( uSec > usTimeOut ) 
-			return -1;
-		
-		++uSec;
-		esp_rom_delay_us(1);		// uSec delay
-	}
-	
-	return uSec;
+    int64_t start = esp_timer_get_time();
+    while (gpio_get_level(DHTgpio) == state) {
+        if ((esp_timer_get_time() - start) > usTimeOut) {
+            return -1;
+        }
+    }
+    return (int)(esp_timer_get_time() - start);
 }
 
 /*----------------------------------------------------------------------------

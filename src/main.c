@@ -11,8 +11,8 @@
 #include "hardware_config.h"
 #include "DHT22.h"
 
-
-#define tamMatriz 500
+#define TOLERANCIA_UMIDADE 2.0f // variação de 2% em torno do sensor
+#define tamMatriz 40
 
 typedef struct{
     int i;
@@ -67,7 +67,24 @@ void liberarMatriz(float** matriz, int m){
     free(matriz);
 }
 
-void lerSensores(float** matriz, int m, int n){
+void calcularDiferencasDHT(const float umidades_dht[4], int umidade_alvo, float diferencas[4]) {
+    printf("--- Diferenca por Sensor (Alvo: %d%%) ---\n", umidade_alvo);
+
+    for (int k = 0; k < 4; k++) {
+        // Positivo = falta umidade | Negativo = excesso de umidade
+        diferencas[k] = (float)umidade_alvo - umidades_dht[k];
+
+        if (diferencas[k] > TOLERANCIA_UMIDADE) {
+            printf("DHT%d: %.1f%% | Variar: +%.1f%% -> UMIDIFICAR\n",
+                   k + 1, umidades_dht[k], diferencas[k]);
+        } else if (diferencas[k] < -TOLERANCIA_UMIDADE) {
+            printf("DHT%d: %.1f%% | Variar: %.1f%% -> DESUMIDIFICAR\n",
+                   k + 1, umidades_dht[k], diferencas[k]);
+        } else {
+            printf("DHT%d: %.1f%% | Variar: %+.1f%% -> ESTAVEL\n",
+                   k + 1, umidades_dht[k], diferencas[k]);
+        }
+    }
 }
 
 void executar_acao(Acao acao){
@@ -115,17 +132,17 @@ void atualizar_lcd_umidade(int digitos_lidos, int umidade, bool confirmado) {
         snprintf(linha0, sizeof(linha0), "Monitorando...  ");
         snprintf(linha1, sizeof(linha1), "Atual: --.- %%   ");
 
-        // LCD2: umidade alvo
+        // LCD1: umidade alvo confirmada
         char alvo0[32];
         char alvo1[32];
-        snprintf(alvo0, sizeof(alvo0), "Umidade Alvo:     ");
+        snprintf(alvo0, sizeof(alvo0), "Umidade Alvo:   "); // Exatos 16 caracteres
         snprintf(alvo1, sizeof(alvo1), "%02d %%            ", umidade_segura);
         lcd_set_cursor(LCD1_ADDR, 0, 0);
         lcd_send_string(LCD1_ADDR, alvo0);
         lcd_set_cursor(LCD1_ADDR, 1, 0);
         lcd_send_string(LCD1_ADDR, alvo1);
     } else {
-        snprintf(linha0, sizeof(linha0), "Digite a umidade:  ");
+        snprintf(linha0, sizeof(linha0), "Digite Umidade: "); // Exatos 16 caracteres
         
         if (digitos_lidos == 0) {
             snprintf(linha1, sizeof(linha1), "Val: [__] %%     ");
@@ -142,6 +159,73 @@ void atualizar_lcd_umidade(int digitos_lidos, int umidade, bool confirmado) {
     lcd_send_string(LCD2_ADDR, linha0);
     lcd_set_cursor(LCD2_ADDR, 1, 0);
     lcd_send_string(LCD2_ADDR, linha1);
+}
+
+// Atualiza apenas a linha "Atual: XX.X %" no LCD2 com a média calculada da matriz
+void atualizar_lcd_media_atual(float umidade_media) {
+    char linha1[32];
+
+    if (umidade_media < 0.0f) umidade_media = 0.0f;
+    if (umidade_media > 100.0f) umidade_media = 100.0f;
+
+    unsigned int inteiro = (unsigned int)umidade_media;
+    unsigned int decimal = (unsigned int)((umidade_media - (float)inteiro) * 10.0f + 0.5f);
+    if (decimal >= 10) {
+        inteiro++;
+        decimal = 0;
+    }
+
+    // Exatos 16 caracteres: "Atual:  54.3 %  " ou "Atual: 100.0 %  "
+    snprintf(linha1, sizeof(linha1), "Atual: %3u.%u %%  ", inteiro % 101, decimal % 10);
+
+    lcd_set_cursor(LCD2_ADDR, 1, 0);
+    lcd_send_string(LCD2_ADDR, linha1);
+}
+
+// preenchimento da matriz com a umidade interpolada pelos 4 dhts
+
+float simularUmidade(float** matriz, int n, coordMatriz extr[4], float leituras_dht[4]){
+    if (matriz == NULL || n <= 0){
+        return 0.0f;
+    }
+
+    double soma_total = 0.0;
+    for (int i = 0; i < n; i++){
+        if (matriz[i] == NULL){
+            continue;
+        }
+        for (int j = 0; j < n; j++){
+            float soma_pesos = 0.0f;
+            float soma_ponderada = 0.0f;
+            bool ponto_exato = false;
+
+            for (int k = 0; k < 4; k++){
+                int di = i - extr[k].i;
+                int dj = j - extr[k].j;
+                int dist2 = (di * di) + (dj * dj);
+
+                if (dist2 == 0){
+                    matriz[i][j] = leituras_dht[k];
+                    ponto_exato = true;
+                    break;
+                }
+
+                float peso = 1.0f/(float)dist2;
+                soma_ponderada += peso * leituras_dht[k];
+                soma_pesos += peso;
+
+            }
+            if (!ponto_exato && soma_pesos > 0.0f){
+                matriz[i][j] = soma_ponderada / soma_pesos;
+            }
+            soma_total += matriz[i][j];
+        }
+        if (i % 50 == 0){
+            vTaskDelay(1);
+        }
+    }
+
+    return (float)(soma_total / ((double)n*(double)n));
 }
 
 
@@ -200,6 +284,7 @@ void app_main(void) {
     const int pinosDHT[4] = {19, 20, 21, 0};
     float temperaturas_dht[4] = {0};
     float umidades_dht[4] = {0};
+    float diferenca_dht[4] = {0};
 
     int contadorDHT = 40; // inicialização dos contadores em 40 para fazer a primeira leitura na inicialização
 
@@ -269,37 +354,39 @@ void app_main(void) {
 
 
         // CONFIGURAÇÃO DO DHT NO MAIN
-            contadorDHT++;
-            if (contadorDHT >= 40){ // 40 * 50ms = 2 segundos
-                contadorDHT = 0;
+        contadorDHT++;
+        if (contadorDHT >= 40) { // A cada 2 segundos (40 * 50ms)
+            contadorDHT = 0;
+            bool leitura_atualizada = false; // <-- Criada aqui, zerada a cada ciclo
 
-                float soma_temp = 0;
-                float soma_umid = 0;
+            for (int k = 0; k < 4; k++) {
+                setDHTgpio(pinosDHT[k]);
+                int ret = readDHT();
 
-                for (int k = 0; k < 4; k++){
-                    setDHTgpio(pinosDHT[k]);
-                    int ret = readDHT();
-
-                    if (ret == DHT_OK){
-                        temperaturas_dht[k] = getTemperature();
-                        umidades_dht[k] = getHumidity();
-
-                        soma_temp += temperaturas_dht[k];
-                        soma_umid += umidades_dht[k];
-                        if (matriz_area_atuacao != NULL && matriz_area_atuacao[extr[k].i] != NULL){
-                            matriz_area_atuacao[extr[k].i][extr[k].j] = temperaturas_dht[k];
-                        }
-                    } else {
-                        printf("Erro ao ler DHT %d (GPIO %d): ", k + 1, pinosDHT[k]);
-                        errorHandler(ret);
-                    }
+                if (ret == DHT_OK) {
+                    temperaturas_dht[k] = getTemperature();
+                    umidades_dht[k] = getHumidity();
+                    leitura_atualizada = true; // <-- Marca que pelo menos 1 DHT leu direito
+                } else {
+                    printf("Erro ao ler DHT %d (GPIO %d): ", k + 1, pinosDHT[k]);
+                    errorHandler(ret);
                 }
-
-                char buf_lcd2[32];
-                snprintf(buf_lcd2, sizeof(buf_lcd2), "Umid. media: %.0f%%   ", soma_umid/4);
-                lcd_set_cursor(LCD2_ADDR, 1, 0);
-                lcd_send_string(LCD2_ADDR, buf_lcd2);
             }
+
+            // Só interpola a matriz e atualiza o LCD se houve leitura válida
+            if (leitura_atualizada) {
+                float umidade_media = simularUmidade(matriz_area_atuacao, tamMatriz, extr, umidades_dht);
+                printf("DHTs: [%.1f%%, %.1f%%, %.1f%%, %.1f%%] | Media Matriz: %.1f%%\n",
+                       umidades_dht[0], umidades_dht[1], umidades_dht[2], umidades_dht[3], umidade_media);
+
+                if (estado_atual != ESTADO_DEZENA &&
+                    estado_atual != ESTADO_UNIDADE &&
+                    estado_atual != ESTADO_CONFIRMACAO) {
+                    atualizar_lcd_media_atual(umidade_media);
+                    calcularDiferencasDHT(umidades_dht, umidade_alvo, diferenca_dht);
+                }
+            }
+        }
 
 
         // --------------------------------------------
