@@ -18,7 +18,6 @@
       "left": -150,
       "attrs": { "value": "220" }
     },
-    { "type": "wokwi-potentiometer", "id": "pot_b1", "top": -150, "left": -175, "attrs": {} },
     {
       "type": "wokwi-led",
       "id": "led_y1",
@@ -33,7 +32,6 @@
       "left": -100,
       "attrs": { "value": "220" }
     },
-    { "type": "wokwi-potentiometer", "id": "pot_y1", "top": -150, "left": -125, "attrs": {} },
     { "type": "wokwi-dht22", "id": "dht1", "top": -150, "left": -250, "attrs": {} },
     { "type": "wokwi-led", "id": "led_b2", "top": -50, "left": 150, "attrs": { "color": "blue" } },
     {
@@ -43,7 +41,6 @@
       "left": 150,
       "attrs": { "value": "220" }
     },
-    { "type": "wokwi-potentiometer", "id": "pot_b2", "top": -150, "left": 125, "attrs": {} },
     {
       "type": "wokwi-led",
       "id": "led_y2",
@@ -58,7 +55,6 @@
       "left": 200,
       "attrs": { "value": "220" }
     },
-    { "type": "wokwi-potentiometer", "id": "pot_y2", "top": -150, "left": 175, "attrs": {} },
     { "type": "wokwi-dht22", "id": "dht2", "top": -150, "left": 250, "attrs": {} },
     {
       "type": "wokwi-led",
@@ -74,7 +70,6 @@
       "left": -150,
       "attrs": { "value": "220" }
     },
-    { "type": "wokwi-potentiometer", "id": "pot_b3", "top": 280, "left": -175, "attrs": {} },
     {
       "type": "wokwi-led",
       "id": "led_y3",
@@ -89,7 +84,7 @@
       "left": -100,
       "attrs": { "value": "220" }
     },
-    { "type": "wokwi-potentiometer", "id": "pot_y3", "top": 280, "left": -125, "attrs": {} },
+
     { "type": "wokwi-dht22", "id": "dht3", "top": 280, "left": -250, "attrs": {} },
     { "type": "wokwi-led", "id": "led_b4", "top": 180, "left": 150, "attrs": { "color": "blue" } },
     {
@@ -99,7 +94,6 @@
       "left": 150,
       "attrs": { "value": "220" }
     },
-    { "type": "wokwi-potentiometer", "id": "pot_b4", "top": 280, "left": 125, "attrs": {} },
     {
       "type": "wokwi-led",
       "id": "led_y4",
@@ -114,7 +108,6 @@
       "left": 200,
       "attrs": { "value": "220" }
     },
-    { "type": "wokwi-potentiometer", "id": "pot_y4", "top": 280, "left": 175, "attrs": {} },
     { "type": "wokwi-dht22", "id": "dht4", "top": 280, "left": 250, "attrs": {} },
     { "type": "wokwi-membrane-keypad", "id": "keypad1", "top": 120, "left": 400, "attrs": {} },
     {

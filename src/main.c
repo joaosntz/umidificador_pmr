@@ -13,6 +13,12 @@
 
 #define TOLERANCIA_UMIDADE 2.0f // variação de 2% em torno do sensor
 #define tamMatriz 40
+#define lowIntensity 1024 // 25% de potencia
+#define mediumIntensity 2048 // 50% de potencia
+#define highIntensity 4095 // 100% de potencia
+
+
+
 
 typedef struct{
     int i;
@@ -188,6 +194,57 @@ void atualizar_lcd_media_atual(float umidade_media) {
     lcd_send_string(LCD2_ADDR, linha1);
 }
 
+void desligarAtuadores (void){
+    for (int i = 0; i < 8; i++){
+        ledc_set_duty(LEDC_LOW_SPEED_MODE, ledc_channels[i], 0);
+        ledc_update_duty(LEDC_LOW_SPEED_MODE, ledc_channels[i]);
+    }
+}
+
+void atualizarAtuadores (Estado estado, const float diferencas[4], float variacao_atuador[4]){
+    if(estado == ESTADO_MONITORANDO){
+        desligarAtuadores();
+        return;
+    }
+    for (int k = 0; k < 4; k++){
+        uint32_t duty_umid = 0;
+        uint32_t duty_desumid = 0;
+
+        float erro = (diferencas[k] >= 0.0f) ? diferencas[k] : -diferencas[k];
+        uint32_t intensidade = 0;
+        float variacao_umidade = 0.0f; // variação da umidade em um sensor a cada 2s
+
+        if (erro > 20.0f){
+            intensidade = highIntensity;
+            variacao_umidade = 5.0f;
+        } else if (erro > 10.0f){
+            intensidade = mediumIntensity;
+            variacao_umidade = 2.5f;
+        } else if (erro > TOLERANCIA_UMIDADE){
+            intensidade = highIntensity;
+            variacao_umidade = 1.0f;
+        }
+
+        if (estado == ESTADO_U_ATIVOS && diferencas[k] > TOLERANCIA_UMIDADE){
+            duty_umid = intensidade;
+            variacao_atuador[k] += variacao_umidade;
+        } else if (estado == ESTADO_D_ATIVOS && diferencas[k] < -TOLERANCIA_UMIDADE){
+            duty_desumid = intensidade;
+            variacao_atuador[k] -= variacao_umidade;
+        }
+
+        int i_umid = k *2;
+        int i_desumid = (k*2) + 1;
+
+        ledc_set_duty(LEDC_LOW_SPEED_MODE, ledc_channels[i_umid], duty_umid);
+        ledc_update_duty(LEDC_LOW_SPEED_MODE, ledc_channels[i_umid]);
+
+        ledc_set_duty(LEDC_LOW_SPEED_MODE, ledc_channels[i_desumid], duty_desumid);
+        ledc_update_duty(LEDC_LOW_SPEED_MODE, ledc_channels[i_desumid]);
+    }
+}
+
+
 // preenchimento da matriz com a umidade interpolada pelos 4 dhts
 
 float simularUmidade(float** matriz, int n, coordMatriz extr[4], float leituras_dht[4]){
@@ -241,7 +298,6 @@ void app_main(void) {
     // INICIALIZAÇÃO DAS FUNÇÕES DOS COMPONENTES DE HARDWARE
 
     init_pwm_leds();
-    init_adc_pots();
     init_i2c_lcd();
     init_keypad();
 
@@ -283,8 +339,6 @@ void app_main(void) {
     Evento evento;
     Transicao t;
 
-    int pot_values[10];
-
 
     // DHT
     const int pinosDHT[4] = {19, 20, 21, 0};
@@ -293,6 +347,8 @@ void app_main(void) {
     float diferenca_dht[4] = {0};
 
     int contadorDHT = 40; // inicialização dos contadores em 40 para fazer a primeira leitura na inicialização
+    float umidades_efetivas[4] = {0};
+    float variacao_atuador[4] = {0};
 
     while (1) {
         char tecla = ler_teclado();
@@ -342,20 +398,6 @@ void app_main(void) {
             }
         }
         // --------------------------------------------
-        
-        for (int i = 0; i < 10; i++) {
-            adc_oneshot_read(adc1_handle, pot_channels[i], &pot_values[i]);
-            
-            if (i < 8) {
-                ledc_set_duty(LEDC_LOW_SPEED_MODE, ledc_channels[i], pot_values[i]);
-                ledc_update_duty(LEDC_LOW_SPEED_MODE, ledc_channels[i]);
-            } else {
-                int32_t densidade_calculada = (pot_values[i] * 255 / 4095) - 128;
-                int8_t sdm_duty = (int8_t)densidade_calculada;
-                
-                sdm_channel_set_pulse_density(sdm_handles[i - 8], sdm_duty);
-            }
-        }
 
 
         // CONFIGURAÇÃO DO DHT NO MAIN
@@ -381,29 +423,53 @@ void app_main(void) {
 
                 // Só interpola a matriz e atualiza o LCD se houve leitura válida
                 if (leitura_atualizada) {
-                    float umidade_media = simularUmidade(matriz_area_atuacao, tamMatriz, extr, umidades_dht);
+                    for (int k = 0; k < 4; k++){
+                        umidades_efetivas[k] = umidades_dht[k] + variacao_atuador[k];
+                        if(umidades_efetivas[k] < 0.0f) umidades_efetivas[k] = 0.0f;
+                        if (umidades_efetivas[k] > 100.0f) umidades_efetivas[k] = 100.0f;
+                    }
+                    float umidade_media = simularUmidade(matriz_area_atuacao, tamMatriz, extr, umidades_efetivas);
                     printf("DHTs: [%.1f%%, %.1f%%, %.1f%%, %.1f%%] | Media Matriz: %.1f%%\n",
-                            umidades_dht[0], umidades_dht[1], umidades_dht[2], umidades_dht[3], umidade_media);
+                            umidades_efetivas[0], umidades_efetivas[1], umidades_efetivas[2], umidades_efetivas[3], umidade_media);
 
                     atualizar_lcd_media_atual(umidade_media);
-                    calcularDiferencasDHT(umidades_dht, umidade_alvo, diferenca_dht);
+                    calcularDiferencasDHT(umidades_efetivas, umidade_alvo, diferenca_dht);
+
+                    // verifica se todas as zonas de leitura estao ok
+                    bool todas_ok = true;
+                    for (int k = 0; k < 4; k++){
+                        if (diferenca_dht[k] > TOLERANCIA_UMIDADE || diferenca_dht[k] < -TOLERANCIA_UMIDADE){
+                            todas_ok = false;
+                            break;
+                        }
+                    }
                     
                     // transição para os outros estados baseado no evento da FSM disparado pelo erro
 
                     float erro_medio = (float)umidade_alvo - umidade_media;
                     Evento ev_controle;
-                    if (erro_medio > TOLERANCIA_UMIDADE){
+                    if (todas_ok){
+                        ev_controle = EVENTO_UMIDADE_ESTAVEL;
+                    }
+                      else if(erro_medio > TOLERANCIA_UMIDADE){
                         ev_controle = EVENTO_UMIDADE_ABAIXO;
                     } else if (erro_medio < -TOLERANCIA_UMIDADE){
                         ev_controle = EVENTO_UMIDADE_ACIMA;
                     } else{
-                        ev_controle = EVENTO_UMIDADE_ESTAVEL;
+                        float maior_erro = 0.0f;
+                        for (int k =0; k<4; k++){
+                            float abs_k = (diferenca_dht[k] >= 0.0f) ? diferenca_dht[k] : -diferenca_dht[k];
+                            float abs_m = (maior_erro >= 0.0f) ? maior_erro : -maior_erro;
+                            if (abs_k > abs_m) maior_erro = diferenca_dht[k];
+                        }
+                        ev_controle = (maior_erro > 0.0f) ? EVENTO_UMIDADE_ABAIXO : EVENTO_UMIDADE_ACIMA;
                     }
                     t = tabela_transicao[estado_atual][ev_controle];
                     if (t.proximo_estado != estado_atual){
                         estado_atual = t.proximo_estado;
                         executar_acao(t.acao_a_executar);
                     }
+                    atualizarAtuadores(estado_atual, diferenca_dht, variacao_atuador);
                 }
             }
         }

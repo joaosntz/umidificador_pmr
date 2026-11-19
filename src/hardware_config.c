@@ -10,16 +10,7 @@ ledc_channel_t ledc_channels[8] = {
     LEDC_CHANNEL_4, LEDC_CHANNEL_5, LEDC_CHANNEL_6, LEDC_CHANNEL_7
 };
 
-int sdm_pins[2] = {LED_B5_PIN, LED_Y5_PIN};
-sdm_channel_handle_t sdm_handles[2];
 
-adc_channel_t pot_channels[10] = {
-    POT_B1_CHAN, POT_Y1_CHAN, POT_B2_CHAN, POT_Y2_CHAN,
-    POT_B3_CHAN, POT_Y3_CHAN, POT_B4_CHAN, POT_Y4_CHAN,
-    POT_B5_CHAN, POT_Y5_CHAN
-};
-
-adc_oneshot_unit_handle_t adc1_handle;
 
 void init_pwm_leds(void) {
     ledc_timer_config_t ledc_timer = {
@@ -43,33 +34,8 @@ void init_pwm_leds(void) {
         };
         ledc_channel_config(&ledc_conf);
     }
-
-    sdm_config_t sdm_config = {
-        .clk_src = SDM_CLK_SRC_DEFAULT,
-        .sample_rate_hz = 1000000,
-    };
-    for (int i = 0; i < 2; i++) {
-        sdm_config.gpio_num = sdm_pins[i];
-        sdm_new_channel(&sdm_config, &sdm_handles[i]);
-        sdm_channel_enable(sdm_handles[i]);
-    }
 }
 
-void init_adc_pots(void) {
-    adc_oneshot_unit_init_cfg_t init_config = {
-        .unit_id = ADC_UNIT_1,
-    };
-    adc_oneshot_new_unit(&init_config, &adc1_handle);
-
-    adc_oneshot_chan_cfg_t config = {
-        .bitwidth = ADC_BITWIDTH_12,
-        .atten = ADC_ATTEN_DB_12, 
-    };
-
-    for (int i = 0; i < 10; i++) {
-        adc_oneshot_config_channel(adc1_handle, pot_channels[i], &config);
-    }
-}
 
 void init_i2c_lcd(void) {
     i2c_config_t conf = {
