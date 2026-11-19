@@ -15,4 +15,11 @@ void liberarMatriz(float** matriz, int m);
 void lerSensores(float** matriz, int m, int n);
 void mapaErro(float** matriz, int m, int n);
 
+// IDW
+
+#define NUM_MODULOS 4
+
+
+void interpolar_idw(const float leituras[NUM_MODULOS], const float mapaErro);
+
 #endif

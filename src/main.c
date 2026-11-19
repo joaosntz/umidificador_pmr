@@ -9,6 +9,7 @@
 #include "driver/sdm.h"
 #include "esp_adc/adc_oneshot.h"
 #include "hardware_config.h"
+#include "DHT22.h"
 
 
 #define tamMatriz 500
@@ -19,7 +20,7 @@ typedef struct{
     const char* nome;
 } coordMatriz;
 
-void inicializarExtremidades(coordMatriz extr[5]){
+void inicializarExtremidades(coordMatriz extr[4]){
     // visando aprimorar o algoritmo da IDW, precisamos definir uma margem de atuação do sensor (nunca num extremo especifico)
 
     int min_borda = 0; //tamMatriz * 0.02;
@@ -30,7 +31,6 @@ void inicializarExtremidades(coordMatriz extr[5]){
     extr[1] = (coordMatriz){.i = min_borda, .j = max_borda, .nome = "Superior Direito"};
     extr[2] = (coordMatriz){.i = max_borda, .j = min_borda, .nome = "Inferior Esquerdo"};
     extr[3] = (coordMatriz){.i = max_borda, .j = max_borda, .nome = "Inferior Direito"};
-    extr[4] = (coordMatriz){.i = meio, .j = meio, .nome = "Centro"};
 }
 
 float** criarMatriz(int m, int n){
@@ -81,7 +81,7 @@ void executar_acao(Acao acao){
             printf("[AÇÃO]: Botão numérico pressionado, aguardando confirmação.\n");
             break;
         case ACAO_A30:
-            printf("[AÇÃO]: Botão C pressionado - Confirmação da temperatura e entra em estado de monitoramento.\n");
+            printf("[AÇÃO]: Botão C pressionado - Confirmação da umidade e entra em estado de monitoramento.\n");
             break;
         case ACAO_A35:
             printf("[AÇÃO]: Botão D pressionado - Volta para o estado de digito da unidade.\n");
@@ -106,35 +106,35 @@ void executar_acao(Acao acao){
 
 // LCD
 
-void atualizar_lcd_temperatura(int digitos_lidos, int temp, bool confirmado) {
+void atualizar_lcd_umidade(int digitos_lidos, int umidade, bool confirmado) {
     char linha0[32];
     char linha1[32];
-    int temp_segura = temp % 100;
+    int umidade_segura = umidade % 100;
 
     if (confirmado) {
         snprintf(linha0, sizeof(linha0), "Monitorando...  ");
-        snprintf(linha1, sizeof(linha1), "Atual: --.- C   ");
+        snprintf(linha1, sizeof(linha1), "Atual: --.- %%   ");
 
-        // LCD2: temperatura alvo
+        // LCD2: umidade alvo
         char alvo0[32];
         char alvo1[32];
-        snprintf(alvo0, sizeof(alvo0), "Temp. Alvo:     ");
-        snprintf(alvo1, sizeof(alvo1), "%02d C            ", temp_segura);
+        snprintf(alvo0, sizeof(alvo0), "Umidade Alvo:     ");
+        snprintf(alvo1, sizeof(alvo1), "%02d %%            ", umidade_segura);
         lcd_set_cursor(LCD1_ADDR, 0, 0);
         lcd_send_string(LCD1_ADDR, alvo0);
         lcd_set_cursor(LCD1_ADDR, 1, 0);
         lcd_send_string(LCD1_ADDR, alvo1);
     } else {
-        snprintf(linha0, sizeof(linha0), "Digite a Temp:  ");
+        snprintf(linha0, sizeof(linha0), "Digite a umidade:  ");
         
         if (digitos_lidos == 0) {
-            snprintf(linha1, sizeof(linha1), "Val: [__] C     ");
+            snprintf(linha1, sizeof(linha1), "Val: [__] %%     ");
         } 
         else if (digitos_lidos == 1) {
-            snprintf(linha1, sizeof(linha1), "Val: [%d_] C     ", temp_segura % 10);
+            snprintf(linha1, sizeof(linha1), "Val: [%d_] %%     ", umidade_segura % 10);
         } 
         else {
-            snprintf(linha1, sizeof(linha1), "Val: [%02d] C OK? ", temp_segura);
+            snprintf(linha1, sizeof(linha1), "Val: [%02d] %% OK? ", umidade_segura);
         }
     }
 
@@ -170,9 +170,9 @@ void app_main(void) {
 
     // verifica o tamanho da matriz e onde são os extremos (utilizados para calcular a distancia euclidiana)
 
-    coordMatriz extr[5];
+    coordMatriz extr[4];
     inicializarExtremidades(extr);
-    for(int i = 0; i < 5; i++){
+    for(int i = 0; i < 4; i++){
         printf("Extremidade %d: %s (i: %d, j: %d)\n", i, extr[i].nome, extr[i].i, extr[i].j);
     }
 
@@ -182,12 +182,12 @@ void app_main(void) {
     lcd_init(LCD2_ADDR);
 
     
-    //atualizar_lcd_temperatura(0, 0, false); // mostra "Valor: [__] C" logo ao ligar
+    //atualizar_lcd_umidade(0, 0, false); // mostra "Valor: [__] C" logo ao ligar
 
     // teclado numérico
-    int temp = 0; // guarda o numero que esta sendo digitado
+    int umidade = 0; // guarda o numero que esta sendo digitado
     int digitos_lidos = 0; // conta quantos digitos foram inseridos (máx 2)
-    int temperatura_alvo = 25; // temperatura de valor inicial
+    int umidade_alvo = 25; // umidade de valor inicial
     Estado estado_atual = ESTADO_DEZENA; // estado inicial
     int opcao;
     Evento evento;
@@ -195,10 +195,18 @@ void app_main(void) {
 
     int pot_values[10];
 
+
+    // DHT
+    const int pinosDHT[4] = {19, 20, 21, 0};
+    float temperaturas_dht[4] = {0};
+    float umidades_dht[4] = {0};
+
+    int contadorDHT = 40; // inicialização dos contadores em 40 para fazer a primeira leitura na inicialização
+
     while (1) {
         char tecla = ler_teclado();
         if (estado_atual == ESTADO_DEZENA || estado_atual == ESTADO_UNIDADE || estado_atual == ESTADO_CONFIRMACAO){
-            atualizar_lcd_temperatura(digitos_lidos, temp, false);
+            atualizar_lcd_umidade(digitos_lidos, umidade, false);
             if (tecla != '\0'){
                 if (tecla >= '0' && tecla <= '9'){
                     if (digitos_lidos < 2){
@@ -207,12 +215,12 @@ void app_main(void) {
                         t = tabela_transicao[estado_atual][evento];
                         estado_atual = t.proximo_estado;
                         executar_acao(t.acao_a_executar);
-                        temp = (temp * 10) + (tecla - '0');
+                        umidade = (umidade * 10) + (tecla - '0');
                         digitos_lidos++;
-                        atualizar_lcd_temperatura(digitos_lidos, temp, false);
+                        atualizar_lcd_umidade(digitos_lidos, umidade, false);
                         
                     } else{
-                        printf("Limite de 2 digitos atingido (%d)! Pressione 'C' para confirmar ou 'D' para cancelar.\n", temp);
+                        printf("Limite de 2 digitos atingido (%d)! Pressione 'C' para confirmar ou 'D' para cancelar.\n", umidade);
                     }
                 }
 
@@ -222,9 +230,9 @@ void app_main(void) {
                     t = tabela_transicao[estado_atual][evento];
                     estado_atual = t.proximo_estado;
                     executar_acao(t.acao_a_executar);
-                    temp = 0;
+                    umidade = 0;
                     digitos_lidos = 0;
-                    atualizar_lcd_temperatura(digitos_lidos, temp, false);
+                    atualizar_lcd_umidade(digitos_lidos, umidade, false);
                 }
                 
                 else if (tecla == 'C'){
@@ -234,9 +242,9 @@ void app_main(void) {
                         t = tabela_transicao[estado_atual][evento];
                         estado_atual = t.proximo_estado;
                         executar_acao(t.acao_a_executar);
-                        temperatura_alvo = temp;
-                        atualizar_lcd_temperatura(digitos_lidos, temp, true);
-                        temp = 0;
+                        umidade_alvo = umidade;
+                        atualizar_lcd_umidade(digitos_lidos, umidade, true);
+                        umidade = 0;
                         digitos_lidos = 0;
                     }
                 }
@@ -258,6 +266,43 @@ void app_main(void) {
                 sdm_channel_set_pulse_density(sdm_handles[i - 8], sdm_duty);
             }
         }
+
+
+        // CONFIGURAÇÃO DO DHT NO MAIN
+            contadorDHT++;
+            if (contadorDHT >= 40){ // 40 * 50ms = 2 segundos
+                contadorDHT = 0;
+
+                float soma_temp = 0;
+                float soma_umid = 0;
+
+                for (int k = 0; k < 4; k++){
+                    setDHTgpio(pinosDHT[k]);
+                    int ret = readDHT();
+
+                    if (ret == DHT_OK){
+                        temperaturas_dht[k] = getTemperature();
+                        umidades_dht[k] = getHumidity();
+
+                        soma_temp += temperaturas_dht[k];
+                        soma_umid += umidades_dht[k];
+                        if (matriz_area_atuacao != NULL && matriz_area_atuacao[extr[k].i] != NULL){
+                            matriz_area_atuacao[extr[k].i][extr[k].j] = temperaturas_dht[k];
+                        }
+                    } else {
+                        printf("Erro ao ler DHT %d (GPIO %d): ", k + 1, pinosDHT[k]);
+                        errorHandler(ret);
+                    }
+                }
+
+                char buf_lcd2[32];
+                snprintf(buf_lcd2, sizeof(buf_lcd2), "Umid. media: %.0f%%   ", soma_umid/4);
+                lcd_set_cursor(LCD2_ADDR, 1, 0);
+                lcd_send_string(LCD2_ADDR, buf_lcd2);
+            }
+
+
+        // --------------------------------------------
         vTaskDelay(pdMS_TO_TICKS(50)); 
     }
 }

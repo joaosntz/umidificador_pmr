@@ -116,31 +116,6 @@
     },
     { "type": "wokwi-potentiometer", "id": "pot_y4", "top": 280, "left": 175, "attrs": {} },
     { "type": "wokwi-dht22", "id": "dht4", "top": 280, "left": 250, "attrs": {} },
-    { "type": "wokwi-led", "id": "led_b5", "top": 250, "left": -25, "attrs": { "color": "blue" } },
-    {
-      "type": "wokwi-resistor",
-      "id": "r_b5",
-      "top": 210,
-      "left": -25,
-      "attrs": { "value": "220" }
-    },
-    { "type": "wokwi-potentiometer", "id": "pot_b5", "top": 350, "left": -50, "attrs": {} },
-    {
-      "type": "wokwi-led",
-      "id": "led_y5",
-      "top": 250,
-      "left": 25,
-      "attrs": { "color": "yellow" }
-    },
-    {
-      "type": "wokwi-resistor",
-      "id": "r_y5",
-      "top": 210,
-      "left": 25,
-      "attrs": { "value": "220" }
-    },
-    { "type": "wokwi-potentiometer", "id": "pot_y5", "top": 350, "left": 0, "attrs": {} },
-    { "type": "wokwi-dht22", "id": "dht5", "top": 450, "left": -25, "attrs": {} },
     { "type": "wokwi-membrane-keypad", "id": "keypad1", "top": 120, "left": 400, "attrs": {} },
     {
       "type": "wokwi-lcd1602",
@@ -240,9 +215,6 @@
     [ "dht4:VCC", "esp:3V3", "red", [] ],
     [ "dht4:GND", "esp:GND.2", "black", [] ],
     [ "dht4:SDA", "esp:0", "cyan", [] ],
-    [ "dht5:VCC", "esp:3V3", "red", [] ],
-    [ "dht5:GND", "esp:GND.2", "black", [] ],
-    [ "dht5:SDA", "esp:44", "cyan", [] ],
     [ "esp:45", "lcd1:SDA", "green", [ "h196.57", "v-105.78" ] ],
     [ "esp:46", "lcd1:SCL", "green", [ "v-67.38", "h177.32" ] ],
     [ "lcd1:VCC", "esp:5V", "red", [ "h-268.8", "v57.7", "h-9.6", "v134.4" ] ],
