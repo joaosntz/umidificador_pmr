@@ -105,12 +105,18 @@ void executar_acao(Acao acao){
             break;
         case ACAO_A40:
             printf("[AÇÃO]: Valores estáveis - Desativa os umidificadores e monitora o ambiente.\n");
+            lcd_set_cursor(LCD2_ADDR, 0, 0);
+            lcd_send_string(LCD2_ADDR, "Monitorando...  ");
             break;
         case ACAO_A50:
             printf("[AÇÃO]: Valores de umidade ABAIXO da tolerância - Ativa umidificador.\n");
+            lcd_set_cursor(LCD2_ADDR, 0, 0);
+            lcd_send_string(LCD2_ADDR, "Umidificando... ");
             break;
         case ACAO_A55:
             printf("[AÇÃO]: Valores de umidade ACIMA da tolerância - Ativa desumidificador.\n");
+            lcd_set_cursor(LCD2_ADDR, 0, 0);
+            lcd_send_string(LCD2_ADDR, "Desumidificando ");
             break;
         case ACAO_A60:
             printf("[AÇÃO]: Botão reset acionado - Retorna ao estado inicial.\n");
@@ -291,7 +297,6 @@ void app_main(void) {
     while (1) {
         char tecla = ler_teclado();
         if (estado_atual == ESTADO_DEZENA || estado_atual == ESTADO_UNIDADE || estado_atual == ESTADO_CONFIRMACAO){
-            atualizar_lcd_umidade(digitos_lidos, umidade, false);
             if (tecla != '\0'){
                 if (tecla >= '0' && tecla <= '9'){
                     if (digitos_lidos < 2){
@@ -354,36 +359,51 @@ void app_main(void) {
 
 
         // CONFIGURAÇÃO DO DHT NO MAIN
-        contadorDHT++;
-        if (contadorDHT >= 40) { // A cada 2 segundos (40 * 50ms)
-            contadorDHT = 0;
-            bool leitura_atualizada = false; // <-- Criada aqui, zerada a cada ciclo
+        if (estado_atual == ESTADO_MONITORANDO || estado_atual == ESTADO_U_ATIVOS || estado_atual == ESTADO_D_ATIVOS){
+            contadorDHT++;
+            if (contadorDHT >= 40) { // A cada 2 segundos (40 * 50ms)
+                contadorDHT = 0;
+                bool leitura_atualizada = false; // <-- Criada aqui, zerada a cada ciclo
 
-            for (int k = 0; k < 4; k++) {
-                setDHTgpio(pinosDHT[k]);
-                int ret = readDHT();
+                for (int k = 0; k < 4; k++) {
+                    setDHTgpio(pinosDHT[k]);
+                    int ret = readDHT();
 
-                if (ret == DHT_OK) {
-                    temperaturas_dht[k] = getTemperature();
-                    umidades_dht[k] = getHumidity();
-                    leitura_atualizada = true; // <-- Marca que pelo menos 1 DHT leu direito
-                } else {
-                    printf("Erro ao ler DHT %d (GPIO %d): ", k + 1, pinosDHT[k]);
-                    errorHandler(ret);
+                    if (ret == DHT_OK) {
+                        temperaturas_dht[k] = getTemperature();
+                        umidades_dht[k] = getHumidity();
+                        leitura_atualizada = true; // <-- Marca que pelo menos 1 DHT leu direito
+                    } else {
+                        printf("Erro ao ler DHT %d (GPIO %d): ", k + 1, pinosDHT[k]);
+                        errorHandler(ret);
+                    }
                 }
-            }
 
-            // Só interpola a matriz e atualiza o LCD se houve leitura válida
-            if (leitura_atualizada) {
-                float umidade_media = simularUmidade(matriz_area_atuacao, tamMatriz, extr, umidades_dht);
-                printf("DHTs: [%.1f%%, %.1f%%, %.1f%%, %.1f%%] | Media Matriz: %.1f%%\n",
-                       umidades_dht[0], umidades_dht[1], umidades_dht[2], umidades_dht[3], umidade_media);
+                // Só interpola a matriz e atualiza o LCD se houve leitura válida
+                if (leitura_atualizada) {
+                    float umidade_media = simularUmidade(matriz_area_atuacao, tamMatriz, extr, umidades_dht);
+                    printf("DHTs: [%.1f%%, %.1f%%, %.1f%%, %.1f%%] | Media Matriz: %.1f%%\n",
+                            umidades_dht[0], umidades_dht[1], umidades_dht[2], umidades_dht[3], umidade_media);
 
-                if (estado_atual != ESTADO_DEZENA &&
-                    estado_atual != ESTADO_UNIDADE &&
-                    estado_atual != ESTADO_CONFIRMACAO) {
                     atualizar_lcd_media_atual(umidade_media);
                     calcularDiferencasDHT(umidades_dht, umidade_alvo, diferenca_dht);
+                    
+                    // transição para os outros estados baseado no evento da FSM disparado pelo erro
+
+                    float erro_medio = (float)umidade_alvo - umidade_media;
+                    Evento ev_controle;
+                    if (erro_medio > TOLERANCIA_UMIDADE){
+                        ev_controle = EVENTO_UMIDADE_ABAIXO;
+                    } else if (erro_medio < -TOLERANCIA_UMIDADE){
+                        ev_controle = EVENTO_UMIDADE_ACIMA;
+                    } else{
+                        ev_controle = EVENTO_UMIDADE_ESTAVEL;
+                    }
+                    t = tabela_transicao[estado_atual][ev_controle];
+                    if (t.proximo_estado != estado_atual){
+                        estado_atual = t.proximo_estado;
+                        executar_acao(t.acao_a_executar);
+                    }
                 }
             }
         }
