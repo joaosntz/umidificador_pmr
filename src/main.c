@@ -382,7 +382,7 @@ void app_main(void) {
                 }
                 
                 else if (tecla == 'C'){
-                    if (digitos_lidos > 0){
+                    if (digitos_lidos > 1){
                         opcao = 2; // força a mudança de estado para ESTADO_MONITORANDO
                         evento = (Evento)opcao;
                         t = tabela_transicao[estado_atual][evento];
@@ -404,8 +404,17 @@ void app_main(void) {
             t = tabela_transicao[estado_atual][evento];
             estado_atual = t.proximo_estado;
             executar_acao(t.acao_a_executar);
+
             umidade = 0;
             digitos_lidos = 0;
+            contadorDHT = 40;
+            desligarAtuadores();
+            lcd_set_cursor(LCD1_ADDR, 0, 0);
+            lcd_send_string(LCD1_ADDR, "                ");
+            lcd_set_cursor(LCD1_ADDR, 1, 0);
+            lcd_send_string(LCD1_ADDR, "                ");
+
+            atualizar_lcd_umidade(digitos_lidos, umidade, false);
         }
         
 
