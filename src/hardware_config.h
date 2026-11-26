@@ -1,9 +1,7 @@
-#ifndef HARDWARE_CONFIG_H
+#ifndef HARDWARE_CONFIG_H // include guards
 #define HARDWARE_CONFIG_H
 
 #include "driver/ledc.h"
-#include "driver/sdm.h"
-#include "esp_adc/adc_oneshot.h"
 #include "driver/i2c.h"
 
 #define LED_B1_PIN 35
@@ -37,11 +35,14 @@
 #define I2C_MASTER_SCL_IO 46
 #define I2C_MASTER_NUM I2C_NUM_0
 #define I2C_MASTER_FREQ_HZ 100000
-#define LCD1_ADDR 0x27
+#define LCD1_ADDR 0x27 // endereços I2C de 7 bits, serve para diferenciar os LCDs porque utilizam os mesmos fios (SDA - 45 e SCL - 46)
 #define LCD2_ADDR 0x3F
 
-extern int ledc_pins[8];
+extern int ledc_pins[8]; // declara que o array existe, mas não é alocado nesse arquivo
 extern ledc_channel_t ledc_channels[8];
+
+
+// declaaração das funções
 
 void init_pwm_leds(void);
 void init_i2c_lcd(void);

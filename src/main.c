@@ -313,7 +313,7 @@ void app_main(void) {
     lcd_init(LCD2_ADDR);
 
     
-    //atualizar_lcd_umidade(0, 0, false); // mostra "Valor: [__] C" logo ao ligar
+    atualizar_lcd_umidade(0, 0, false); // mostra "Valor: [__] C" logo ao ligar
 
     // teclado numérico
     int umidade = 0; // guarda o numero que esta sendo digitado
@@ -480,6 +480,6 @@ void app_main(void) {
 
 
         // --------------------------------------------
-        vTaskDelay(pdMS_TO_TICKS(50)); 
+        vTaskDelay(pdMS_TO_TICKS(50));  // cede a CPU para a Idle Task, evitando que o ESP32 reinicie por travamento e timeout do Watchdog, além de definir a base de tempo de 40*50 para o DHT22
     }
 }

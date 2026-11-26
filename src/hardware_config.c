@@ -4,8 +4,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-int ledc_pins[8] = {LED_B1_PIN, LED_Y1_PIN, LED_B2_PIN, LED_Y2_PIN, LED_B3_PIN, LED_Y3_PIN, LED_B4_PIN, LED_Y4_PIN};
-ledc_channel_t ledc_channels[8] = {
+int ledc_pins[8] = {LED_B1_PIN, LED_Y1_PIN, LED_B2_PIN, LED_Y2_PIN, LED_B3_PIN, LED_Y3_PIN, LED_B4_PIN, LED_Y4_PIN}; // pares intercalados de umidificadores e desumidificadores
+ledc_channel_t ledc_channels[8] = { // associa cada um dos leds a um dos 8 canais independentes do LEDC do ESP32-S3
     LEDC_CHANNEL_0, LEDC_CHANNEL_1, LEDC_CHANNEL_2, LEDC_CHANNEL_3,
     LEDC_CHANNEL_4, LEDC_CHANNEL_5, LEDC_CHANNEL_6, LEDC_CHANNEL_7
 };
@@ -13,17 +13,17 @@ ledc_channel_t ledc_channels[8] = {
 
 
 void init_pwm_leds(void) {
-    ledc_timer_config_t ledc_timer = {
+    ledc_timer_config_t ledc_timer = { // ajuste fino do brilho do LED, definimos aqui o quão rápido o brilho dele será alterado e em quantas camadas isso será feito (pode conferir o efeito de gradiente)
         .speed_mode       = LEDC_LOW_SPEED_MODE,
         .timer_num        = LEDC_TIMER_0,
-        .duty_resolution  = LEDC_TIMER_12_BIT, 
+        .duty_resolution  = LEDC_TIMER_12_BIT, // responsável pelo efeito de gradiente, define o quão apagado ou o quão brilhoso o led pode ser (aqui temos 2^12 = 4096 ou de 0 a 4095 níveis de brilho)
         .freq_hz          = 5000,              
         .clk_cfg          = LEDC_AUTO_CLK
     };
     ledc_timer_config(&ledc_timer);
 
     for (int i = 0; i < 8; i++) {
-        ledc_channel_config_t ledc_conf = {
+        ledc_channel_config_t ledc_conf = { 
             .speed_mode     = LEDC_LOW_SPEED_MODE,
             .channel        = ledc_channels[i],
             .timer_sel      = LEDC_TIMER_0,
@@ -97,7 +97,7 @@ char ler_teclado(void){
 
     for (int i = 0; i < 4; i++){
         gpio_set_level(i_pins[i], 0); // ativa a linha i
-        esp_rom_delay_us(5);
+        esp_rom_delay_us(5); // espera 5 segundo para estabilizar o nível elétrico antes da leitura
 
         for (int j = 0; j < 4; j++){
             if (gpio_get_level(j_pins[j]) == 0){
