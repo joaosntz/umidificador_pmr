@@ -26,7 +26,7 @@ typedef enum{
     ACAO_A10, // botao numerico foi pressionado e aguarda unidade
     ACAO_A20, // botão numerico foi pressionado e espera confirmação
     ACAO_A30, // botão c pressionado - confirma a temperatura e entra em estado de ativo se necessário ou monitoramento
-    ACAO_A35, // botao d pressionado - volta para o estado de digito da unidade
+    ACAO_A35, // botao d pressionado - volta para o estado de digito da dezena
     ACAO_A40, // valores estaveis - desativa os umidificadores e monitora o ambiente
     ACAO_A50, // valores de umidade ABAIXO da tolerancia - ativa umidificador
     ACAO_A55, // valores de umidade ACIMA da tolerancia - ativa desumidificador
@@ -50,7 +50,7 @@ const Transicao tabela_transicao[NUM_ESTADOS][NUM_EVENTOS] = {
     },
     [ESTADO_UNIDADE] = {
         [EVENTO_TECLA_NUMERICA] = {ACAO_A20, ESTADO_CONFIRMACAO},
-        [EVENTO_TECLA_D] = {ACAO_NENHUMA, ESTADO_UNIDADE},
+        [EVENTO_TECLA_D] = {ACAO_NENHUMA, ESTADO_DEZENA},
         [EVENTO_TECLA_C] = {ACAO_NENHUMA, ESTADO_UNIDADE},
         [EVENTO_UMIDADE_ESTAVEL] = {ACAO_NENHUMA, ESTADO_UNIDADE},
         [EVENTO_UMIDADE_ABAIXO] = {ACAO_NENHUMA, ESTADO_UNIDADE},
@@ -59,7 +59,7 @@ const Transicao tabela_transicao[NUM_ESTADOS][NUM_EVENTOS] = {
     },
     [ESTADO_CONFIRMACAO] = {
         [EVENTO_TECLA_NUMERICA] = {ACAO_NENHUMA, ESTADO_CONFIRMACAO},
-        [EVENTO_TECLA_D] = {ACAO_A35, ESTADO_UNIDADE},
+        [EVENTO_TECLA_D] = {ACAO_A35, ESTADO_DEZENA},
         [EVENTO_TECLA_C] = {ACAO_A30, ESTADO_MONITORANDO},
         [EVENTO_UMIDADE_ESTAVEL] = {ACAO_NENHUMA, ESTADO_CONFIRMACAO},
         [EVENTO_UMIDADE_ABAIXO] = {ACAO_NENHUMA, ESTADO_CONFIRMACAO},

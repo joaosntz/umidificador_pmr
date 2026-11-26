@@ -28,7 +28,6 @@ void init_pwm_leds(void) {
             .channel        = ledc_channels[i],
             .timer_sel      = LEDC_TIMER_0,
             .intr_type      = LEDC_INTR_DISABLE,
-            .gpio_num       = ledc_pins[i],
             .duty           = 0, 
             .hpoint         = 0
         };
@@ -124,14 +123,14 @@ char ler_teclado(void){
 
 
 
-/// LCD (biblioteca importada, deus me livre fazer isso a mão)
+
 
 static void lcd_send_internal(uint8_t addr, uint8_t data, uint8_t flags) {
     uint8_t up = data & 0xF0;
     uint8_t lo = (data << 4) & 0xF0;
     uint8_t data_arr[4];
 
-    // Bit 3 (0x08) = Backlight ligado | Bit 2 (0x04) = Pulso de Enable | Bit 0 (0x01) = RS (0: Comando, 1: Dado)
+    
     data_arr[0] = up | flags | 0x08 | 0x04;
     data_arr[1] = up | flags | 0x08;
     data_arr[2] = lo | flags | 0x08 | 0x04;
@@ -142,29 +141,28 @@ static void lcd_send_internal(uint8_t addr, uint8_t data, uint8_t flags) {
 }
 
 void lcd_send_cmd(uint8_t addr, uint8_t cmd) {
-    lcd_send_internal(addr, cmd, 0x00); // RS = 0 para comando
+    lcd_send_internal(addr, cmd, 0x00); 
 }
 
 void lcd_send_data(uint8_t addr, uint8_t data) {
-    lcd_send_internal(addr, data, 0x01); // RS = 1 para caractere ASCII
+    lcd_send_internal(addr, data, 0x01); 
 }
 
-// Envia apenas os 4 bits superiores (1 único pulso de Enable) para o handshake inicial
+
 static void lcd_send_nibble_init(uint8_t addr, uint8_t nibble) {
     uint8_t data_arr[2];
-    uint8_t val = (nibble & 0xF0) | 0x08; // Mantém Backlight (0x08) ligado, RS = 0
+    uint8_t val = (nibble & 0xF0) | 0x08; 
 
-    data_arr[0] = val | 0x04; // Enable = 1
-    data_arr[1] = val;        // Enable = 0
+    data_arr[0] = val | 0x04; 
+    data_arr[1] = val;        
 
     i2c_master_write_to_device(I2C_MASTER_NUM, addr, data_arr, sizeof(data_arr), pdMS_TO_TICKS(100));
     esp_rom_delay_us(100);
 }
 
 void lcd_init(uint8_t addr) {
-    vTaskDelay(pdMS_TO_TICKS(50)); // Aguarda estabilização de tensão (VCC)
+    vTaskDelay(pdMS_TO_TICKS(50));
 
-    // Sequência oficial da Hitachi para forçar reset por software em 8-bit:
     lcd_send_nibble_init(addr, 0x30);
     vTaskDelay(pdMS_TO_TICKS(5));
     lcd_send_nibble_init(addr, 0x30);
@@ -172,17 +170,15 @@ void lcd_init(uint8_t addr) {
     lcd_send_nibble_init(addr, 0x30);
     esp_rom_delay_us(200);
 
-    // Agora sim: 1 único pulso de 0x20 muda o hardware para o modo 4-bits alinhado!
     lcd_send_nibble_init(addr, 0x20);
     esp_rom_delay_us(200);
 
-    // Daqui em diante o LCD já opera em 4-bits (2 nibbles por comando):
-    lcd_send_cmd(addr, 0x28); // 2 linhas, fonte 5x8
-    lcd_send_cmd(addr, 0x08); // Display OFF
-    lcd_send_cmd(addr, 0x01); // Clear Display
-    vTaskDelay(pdMS_TO_TICKS(5)); // O comando Clear exige pelo menos 2ms!
-    lcd_send_cmd(addr, 0x06); // Cursor avança para a direita
-    lcd_send_cmd(addr, 0x0C); // Display ON, Cursor OFF
+    lcd_send_cmd(addr, 0x28); 
+    lcd_send_cmd(addr, 0x08);
+    lcd_send_cmd(addr, 0x01);
+    vTaskDelay(pdMS_TO_TICKS(5));
+    lcd_send_cmd(addr, 0x06);
+    lcd_send_cmd(addr, 0x0C);
 }
 
 void lcd_clear(uint8_t addr) {

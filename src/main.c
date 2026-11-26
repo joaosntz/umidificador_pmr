@@ -27,9 +27,8 @@ typedef struct{
 } coordMatriz;
 
 void inicializarExtremidades(coordMatriz extr[4]){
-    // visando aprimorar o algoritmo da IDW, precisamos definir uma margem de atuação do sensor (nunca num extremo especifico)
 
-    int min_borda = 0; //tamMatriz * 0.02;
+    int min_borda = 0;
     int max_borda = tamMatriz - 1;
     int meio = tamMatriz / 2; // divisao inteira, pega sempre o inteiro mais próximo, faz com que fique no centro
 
@@ -60,19 +59,6 @@ float** criarMatriz(int m, int n){
     }
     return matriz;
 }
-
-void liberarMatriz(float** matriz, int m){
-    // Função para liberar a memória alocada para a matriz
-    if (matriz == nullptr) {
-        printf("\nMatriz nula, nada a liberar\n");
-        return;
-    }
-    for (int i = 0; i < m; i++){
-        free(matriz[i]);
-    }
-    free(matriz);
-}
-
 void calcularDiferencasDHT(const float umidades_dht[4], int umidade_alvo, float diferencas[4]) {
     printf("--- Diferenca por Sensor (Alvo: %d%%) ---\n", umidade_alvo);
 
@@ -107,7 +93,7 @@ void executar_acao(Acao acao){
             printf("[AÇÃO]: Botão C pressionado - Confirmação da umidade e entra em estado de monitoramento.\n");
             break;
         case ACAO_A35:
-            printf("[AÇÃO]: Botão D pressionado - Volta para o estado de digito da unidade.\n");
+            printf("[AÇÃO]: Botão D pressionado - Volta para o estado de digito da dezena.\n");
             break;
         case ACAO_A40:
             printf("[AÇÃO]: Valores estáveis - Desativa os umidificadores e monitora o ambiente.\n");
