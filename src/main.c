@@ -30,7 +30,6 @@ void inicializarExtremidades(coordMatriz extr[4]){
 
     int min_borda = 0;
     int max_borda = tamMatriz - 1;
-    int meio = tamMatriz / 2; // divisao inteira, pega sempre o inteiro mais próximo, faz com que fique no centro
 
     extr[0] = (coordMatriz){.i = min_borda, .j = min_borda, .nome = "Superior Esquerdo"};
     extr[1] = (coordMatriz){.i = min_borda, .j = max_borda, .nome = "Superior Direito"};
