@@ -206,7 +206,7 @@ void atualizarAtuadores (Estado estado, const float diferencas[4], float variaca
             intensidade = mediumIntensity;
             variacao_umidade = 2.5f;
         } else if (erro > TOLERANCIA_UMIDADE){
-            intensidade = highIntensity;
+            intensidade = lowIntensity;
             variacao_umidade = 1.0f;
         }
 
